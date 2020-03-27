@@ -1,17 +1,16 @@
-from __future__ import print_function, division
 from pydatastructs.utils import TreeNode
 from pydatastructs.miscellaneous_data_structures import Stack
 from pydatastructs.linear_data_structures import (
     OneDimensionalArray, DynamicOneDimensionalArray)
 from pydatastructs.linear_data_structures.arrays import ArrayForTrees
-# TODO: REPLACE COLLECTIONS QUEUE WITH PYDATASTRUCTS QUEUE
 from collections import deque as Queue
 
 __all__ = [
     'AVLTree',
     'BinaryTree',
     'BinarySearchTree',
-    'BinaryTreeTraversal'
+    'BinaryTreeTraversal',
+    'BinaryIndexedTree'
 ]
 
 class BinaryTree(object):
@@ -29,7 +28,7 @@ class BinaryTree(object):
     key
         Required if tree is to be instantiated with
         root otherwise not needed.
-    comp: lambda
+    comp: lambda/function
         Optional, A lambda function which will be used
         for comparison of keys. Should return a
         bool value. By default it implements less
@@ -50,15 +49,15 @@ class BinaryTree(object):
     def __new__(cls, key=None, root_data=None, comp=None,
                 is_order_statistic=False):
         obj = object.__new__(cls)
-        if key == None and root_data != None:
+        if key is None and root_data is not None:
             raise ValueError('Key required.')
-        key = None if root_data == None else key
+        key = None if root_data is None else key
         root = TreeNode(key, root_data)
         root.is_root = True
         obj.root_idx = 0
         obj.tree, obj.size = ArrayForTrees(TreeNode, [root]), 1
         obj.comparator = lambda key1, key2: key1 < key2 \
-                        if comp == None else comp
+                        if comp is None else comp
         obj.is_order_statistic = is_order_statistic
         return obj
 
@@ -151,7 +150,7 @@ class BinaryTree(object):
     def __str__(self):
         to_be_printed = ['' for i in range(self.tree._last_pos_filled + 1)]
         for i in range(self.tree._last_pos_filled + 1):
-            if self.tree[i] != None:
+            if self.tree[i] is not None:
                 node = self.tree[i]
                 to_be_printed[i] = (node.left, node.key, node.data, node.right)
         return str(to_be_printed)
@@ -172,15 +171,15 @@ class BinarySearchTree(BinaryTree):
     2
     >>> b.search(1)
     0
-    >>> b.search(-1) == None
+    >>> b.search(-1) is None
     True
-    >>> b.delete(1) == True
+    >>> b.delete(1) is True
     True
-    >>> b.search(1) == None
+    >>> b.search(1) is None
     True
-    >>> b.delete(2) == True
+    >>> b.delete(2) is True
     True
-    >>> b.search(2) == None
+    >>> b.search(2) is None
     True
 
     References
@@ -194,14 +193,14 @@ class BinarySearchTree(BinaryTree):
     pydatastructs.trees.binary_tree.BinaryTree
     """
     left_size = lambda self, node: self.tree[node.left].size \
-                                        if node.left != None else 0
+                                        if node.left is not None else 0
     right_size = lambda self, node: self.tree[node.right].size \
-                                        if node.right != None else 0
+                                        if node.right is not None else 0
 
     def _update_size(self, start_idx):
         if self.is_order_statistic:
             walk = start_idx
-            while walk != None:
+            while walk is not None:
                 self.tree[walk].size = (
                     self.left_size(self.tree[walk]) +
                     self.right_size(self.tree[walk]) + 1)
@@ -209,18 +208,18 @@ class BinarySearchTree(BinaryTree):
 
     def insert(self, key, data):
         res = self.search(key)
-        if res != None:
+        if res is not None:
             self.tree[res].data = data
             return None
         walk = self.root_idx
-        if self.tree[walk].key == None:
+        if self.tree[walk].key is None:
             self.tree[walk].key = key
             self.tree[walk].data = data
             return None
         new_node, prev_node, flag = TreeNode(key, data), 0, True
         while flag:
             if not self.comparator(key, self.tree[walk].key):
-                if self.tree[walk].right == None:
+                if self.tree[walk].right is None:
                     new_node.parent = prev_node
                     self.tree.append(new_node)
                     self.tree[walk].right = self.size
@@ -228,7 +227,7 @@ class BinarySearchTree(BinaryTree):
                     flag = False
                 prev_node = walk = self.tree[walk].right
             else:
-                if self.tree[walk].left == None:
+                if self.tree[walk].left is None:
                     new_node.parent = prev_node
                     self.tree.append(new_node)
                     self.tree[walk].left = self.size
@@ -241,9 +240,9 @@ class BinarySearchTree(BinaryTree):
         ret_parent = kwargs.get('parent', False)
         parent = None
         walk = self.root_idx
-        if self.tree[walk].key == None:
+        if self.tree[walk].key is None:
             return None
-        while walk != None:
+        while walk is not None:
             if self.tree[walk].key == key:
                 break
             parent = walk
@@ -256,11 +255,11 @@ class BinarySearchTree(BinaryTree):
     def delete(self, key, **kwargs):
         (walk, parent) = self.search(key, parent=True)
         a = None
-        if walk == None:
+        if walk is None:
             return None
-        if self.tree[walk].left == None and \
-            self.tree[walk].right == None:
-            if parent == None:
+        if self.tree[walk].left is None and \
+            self.tree[walk].right is None:
+            if parent is None:
                 self.tree[self.root_idx].data = None
                 self.tree[self.root_idx].key = None
             else:
@@ -272,17 +271,17 @@ class BinarySearchTree(BinaryTree):
                 par_key, root_key = (self.tree[parent].key,
                                      self.tree[self.root_idx].key)
                 new_indices = self.tree.delete(walk)
-                if new_indices != None:
+                if new_indices is not None:
                     a = new_indices[par_key]
                     self.root_idx = new_indices[root_key]
             self._update_size(a)
 
-        elif self.tree[walk].left != None and \
-            self.tree[walk].right != None:
+        elif self.tree[walk].left is not None and \
+            self.tree[walk].right is not None:
             twalk = self.tree[walk].right
             par = walk
             flag = False
-            while self.tree[twalk].left != None:
+            while self.tree[twalk].left is not None:
                 flag = True
                 par = twalk
                 twalk = self.tree[twalk].left
@@ -292,24 +291,24 @@ class BinarySearchTree(BinaryTree):
                 self.tree[par].left = self.tree[twalk].right
             else:
                 self.tree[par].right = self.tree[twalk].right
-            if self.tree[twalk].right != None:
+            if self.tree[twalk].right is not None:
                 self.tree[self.tree[twalk].right].parent = par
-            if twalk != None:
+            if twalk is not None:
                 a = par
                 par_key, root_key = (self.tree[par].key,
                                      self.tree[self.root_idx].key)
                 new_indices = self.tree.delete(twalk)
-                if new_indices != None:
+                if new_indices is not None:
                     a = new_indices[par_key]
                     self.root_idx = new_indices[root_key]
             self._update_size(a)
 
         else:
-            if self.tree[walk].left != None:
+            if self.tree[walk].left is not None:
                 child = self.tree[walk].left
             else:
                 child = self.tree[walk].right
-            if parent == None:
+            if parent is None:
                 self.tree[self.root_idx].left = self.tree[child].left
                 self.tree[self.root_idx].right = self.tree[child].right
                 self.tree[self.root_idx].data = self.tree[child].data
@@ -317,7 +316,7 @@ class BinarySearchTree(BinaryTree):
                 self.tree[self.root_idx].parent = None
                 root_key = self.tree[self.root_idx].key
                 new_indices = self.tree.delete(child)
-                if new_indices != None:
+                if new_indices is not None:
                     self.root_idx = new_indices[root_key]
             else:
                 if self.tree[parent].left == walk:
@@ -329,7 +328,7 @@ class BinarySearchTree(BinaryTree):
                 par_key, root_key = (self.tree[parent].key,
                                      self.tree[self.root_idx].key)
                 new_indices = self.tree.delete(walk)
-                if new_indices != None:
+                if new_indices is not None:
                     parent = new_indices[par_key]
                     self.tree[child].parent = new_indices[par_key]
                     a = new_indices[par_key]
@@ -368,24 +367,24 @@ class BinarySearchTree(BinaryTree):
             raise ValueError("%d is greater than the size of the "
                 "tree which is, %d"%(i + 1, self.tree._num))
         walk = self.root_idx
-        while walk != None:
+        while walk is not None:
             l = self.left_size(self.tree[walk])
             if i == l:
                 return self.tree[walk]
             left_walk = self.tree[walk].left
             right_walk = self.tree[walk].right
-            if left_walk == None and right_walk == None:
+            if left_walk is None and right_walk is None:
                 raise IndexError("The traversal is terminated "
                                  "due to no child nodes ahead.")
             if i < l:
-                if left_walk != None and \
+                if left_walk is not None and \
                     self.comparator(self.tree[left_walk].key,
                     self.tree[walk].key):
                     walk = left_walk
                 else:
                     walk = right_walk
             else:
-                if right_walk != None and \
+                if right_walk is not None and \
                     not self.comparator(self.tree[right_walk].key,
                     self.tree[walk].key):
                     walk = right_walk
@@ -406,7 +405,7 @@ class BinarySearchTree(BinaryTree):
             The key of the node whose rank is to be found out.
         """
         walk = self.search(x)
-        if walk == None:
+        if walk is None:
             return None
         r = self.left_size(self.tree[walk]) + 1
         while self.tree[walk].key != self.tree[self.root_idx].key:
@@ -416,7 +415,216 @@ class BinarySearchTree(BinaryTree):
             walk = p
         return r
 
-class AVLTree(BinarySearchTree):
+    def _simple_path(self, key, root):
+        """
+        Utility funtion to find the simple path between root and node.
+
+        Parameter
+        =========
+
+        key: Node.key
+            Key of the node to be searched
+
+        Returns
+        =======
+
+        path: list
+        """
+
+        stack = Stack()
+        stack.push(root)
+        path = []
+        node_idx = -1
+
+        while not stack.is_empty:
+            node = stack.pop()
+            if self.tree[node].key == key:
+                node_idx = node
+                break
+            if self.tree[node].left:
+                stack.push(self.tree[node].left)
+            if self.tree[node].right:
+                stack.push(self.tree[node].right)
+
+        if node_idx == -1:
+            return path
+
+        while node_idx != 0:
+            path.append(node_idx)
+            node_idx = self.tree[node_idx].parent
+        path.append(0)
+        path.reverse()
+
+        return path
+
+    def _lca_1(self, j, k):
+        root = self.root_idx
+        path1 = self._simple_path(j, root)
+        path2 = self._simple_path(k, root)
+        if not path1 or not path2:
+            raise ValueError("One of two path doesn't exists. See %s, %s"
+                             %(path1, path2))
+
+        n, m = len(path1), len(path2)
+        i = j = 0
+        while i < n and j < m:
+            if path1[i] != path2[j]:
+                return self.tree[path1[i - 1]].key
+            i += 1
+            j += 1
+        if path1 < path2:
+            return self.tree[path1[-1]].key
+        return self.tree[path2[-1]].key
+
+    def _lca_2(self, j, k):
+        curr_root = self.root_idx
+        u, v = self.search(j), self.search(k)
+        if (u is None) or (v is None):
+            raise ValueError("One of the nodes with key %s "
+                             "or %s doesn't exits"%(j, k))
+        u_left = self.comparator(self.tree[u].key, \
+            self.tree[curr_root].key)
+        v_left = self.comparator(self.tree[v].key, \
+            self.tree[curr_root].key)
+
+        while not (u_left ^ v_left):
+            if u_left and v_left:
+                curr_root = self.tree[curr_root].left
+            else:
+                curr_root = self.tree[curr_root].right
+
+            if curr_root == u or curr_root == v:
+                if curr_root is None:
+                    return None
+                return self.tree[curr_root].key
+
+            u_left = self.comparator(self.tree[u].key, \
+                self.tree[curr_root].key)
+            v_left = self.comparator(self.tree[v].key, \
+                self.tree[curr_root].key)
+
+        if curr_root is None:
+            return curr_root
+        return self.tree[curr_root].key
+
+    def lowest_common_ancestor(self, j, k, algorithm=1):
+
+        """
+        Computes the lowest common ancestor of two nodes.
+
+        Parameters
+        ==========
+
+        j: Node.key
+            Key of first node
+        k: Node.key
+            Key of second node
+        algorithm: int
+            The algorithm to be used for computing the
+            lowest common ancestor.
+            Optional, by default uses algorithm 1.
+
+            1 -> Determines the lowest common ancestor by finding
+                    the first intersection of the paths from v and w
+                    to the root.
+
+            2 -> Modifed version of the algorithm given in the
+                    following publication,
+                    D. Harel. A linear time algorithm for the
+                    lowest common ancestors problem. In 21s
+                    Annual Symposium On Foundations of
+                    Computer Science, pages 308-319, 1980.
+
+        Returns
+        =======
+
+        Node.key
+            The key of the lowest common ancestor in the tree.
+            if both the nodes are present in the tree.
+
+        References
+        ==========
+
+        .. [1] https://en.wikipedia.org/wiki/Lowest_common_ancestor
+
+        .. [2] https://pdfs.semanticscholar.org/e75b/386cc554214aa0ebd6bd6dbdd0e490da3739.pdf
+
+        """
+        return getattr(self, "_lca_"+str(algorithm))(j, k)
+
+class SelfBalancingBinaryTree(BinarySearchTree):
+    """
+    Represents Base class for all rotation based balancing trees like AVL tree, Red Black tree, Splay Tree.
+    """
+    def _right_rotate(self, j, k):
+        y = self.tree[k].right
+        if y is not None:
+            self.tree[y].parent = j
+        self.tree[j].left = y
+        self.tree[k].parent = self.tree[j].parent
+        if self.tree[k].parent is not None:
+            self.tree[self.tree[k].parent].left = k
+        self.tree[j].parent = k
+        self.tree[k].right = j
+        kp = self.tree[k].parent
+        if kp is None:
+            self.root_idx = k
+
+    def _left_right_rotate(self, j, k):
+        i = self.tree[k].right
+        v, w = self.tree[i].left, self.tree[i].right
+        self.tree[k].right, self.tree[j].left = v, w
+        if v is not None:
+            self.tree[v].parent = k
+        if w is not None:
+            self.tree[w].parent = j
+        self.tree[i].left, self.tree[i].right, self.tree[i].parent = \
+            k, j, self.tree[j].parent
+        self.tree[k].parent, self.tree[j].parent = i, i
+        ip = self.tree[i].parent
+        if ip is not None:
+            if self.tree[ip].left == j:
+                self.tree[ip].left = i
+            else:
+                self.tree[ip].right = i
+        else:
+            self.root_idx = i
+
+    def _right_left_rotate(self, j, k):
+        i = self.tree[k].left
+        v, w = self.tree[i].left, self.tree[i].right
+        self.tree[k].left, self.tree[j].right = w, v
+        if v is not None:
+            self.tree[v].parent = j
+        if w is not None:
+            self.tree[w].parent = k
+        self.tree[i].right, self.tree[i].left, self.tree[i].parent = \
+            k, j, self.tree[j].parent
+        self.tree[k].parent, self.tree[j].parent = i, i
+        ip = self.tree[i].parent
+        if ip is not None:
+            if self.tree[ip].left == j:
+                self.tree[ip].left = i
+            else:
+                self.tree[ip].right = i
+        else:
+            self.root_idx = i
+
+    def _left_rotate(self, j, k):
+        y = self.tree[k].left
+        if y is not None:
+            self.tree[y].parent = j
+        self.tree[j].right = y
+        self.tree[k].parent = self.tree[j].parent
+        if self.tree[k].parent is not None:
+            self.tree[self.tree[k].parent].right = k
+        self.tree[j].parent = k
+        self.tree[k].left = j
+        kp = self.tree[k].parent
+        if kp is None:
+            self.root_idx = k
+
+class AVLTree(SelfBalancingBinaryTree):
     """
     Represents AVL trees.
 
@@ -433,54 +641,26 @@ class AVLTree(BinarySearchTree):
     pydatastructs.trees.binary_trees.BinaryTree
     """
     left_height = lambda self, node: self.tree[node.left].height \
-                                        if node.left != None else -1
+                                        if node.left is not None else -1
     right_height = lambda self, node: self.tree[node.right].height \
-                                        if node.right != None else -1
+                                        if node.right is not None else -1
     balance_factor = lambda self, node: self.right_height(node) - \
                                         self.left_height(node)
 
     def _right_rotate(self, j, k):
-        y = self.tree[k].right
-        if y != None:
-            self.tree[y].parent = j
-        self.tree[j].left = y
-        self.tree[k].parent = self.tree[j].parent
-        if self.tree[k].parent != None:
-            self.tree[self.tree[k].parent].left = k
-        self.tree[j].parent = k
-        self.tree[k].right = j
+        super(AVLTree, self)._right_rotate(j, k)
         self.tree[j].height = max(self.left_height(self.tree[j]),
                                   self.right_height(self.tree[j])) + 1
-        kp = self.tree[k].parent
-        if kp == None:
-            self.root_idx = k
         if self.is_order_statistic:
             self.tree[j].size = (self.left_size(self.tree[j]) +
                                  self.right_size(self.tree[j]) + 1)
 
     def _left_right_rotate(self, j, k):
-        i = self.tree[k].right
-        v, w = self.tree[i].left, self.tree[i].right
-        self.tree[k].right, self.tree[j].left = v, w
-        if v != None:
-            self.tree[v].parent = k
-        if w != None:
-            self.tree[w].parent = j
-        self.tree[i].left, self.tree[i].right, self.tree[i].parent = \
-            k, j, self.tree[j].parent
-        self.tree[k].parent, self.tree[j].parent = i, i
+        super(AVLTree, self)._left_right_rotate(j, k)
         self.tree[j].height = max(self.left_height(self.tree[j]),
                                   self.right_height(self.tree[j])) + 1
         self.tree[k].height = max(self.left_height(self.tree[k]),
                                     self.right_height(self.tree[k])) + 1
-        ip = self.tree[i].parent
-        if ip != None:
-            if self.tree[ip].left == j:
-                self.tree[ip].left = i
-            else:
-                self.tree[ip].right = i
-        else:
-            self.root_idx = i
         if self.is_order_statistic:
             self.tree[j].size = (self.left_size(self.tree[j]) +
                                  self.right_size(self.tree[j]) + 1)
@@ -488,28 +668,11 @@ class AVLTree(BinarySearchTree):
                                  self.right_size(self.tree[k]) + 1)
 
     def _right_left_rotate(self, j, k):
-        i = self.tree[k].left
-        v, w = self.tree[i].left, self.tree[i].right
-        self.tree[k].left, self.tree[j].right = w, v
-        if v != None:
-            self.tree[v].parent = j
-        if w != None:
-            self.tree[w].parent = k
-        self.tree[i].right, self.tree[i].left, self.tree[i].parent = \
-            k, j, self.tree[j].parent
-        self.tree[k].parent, self.tree[j].parent = i, i
+        super(AVLTree, self)._right_left_rotate(j, k)
         self.tree[j].height = max(self.left_height(self.tree[j]),
                                   self.right_height(self.tree[j])) + 1
         self.tree[k].height = max(self.left_height(self.tree[k]),
                                     self.right_height(self.tree[k])) + 1
-        ip = self.tree[i].parent
-        if ip != None:
-            if self.tree[ip].left == j:
-                self.tree[ip].left = i
-            else:
-                self.tree[ip].right = i
-        else:
-            self.root_idx = i
         if self.is_order_statistic:
             self.tree[j].size = (self.left_size(self.tree[j]) +
                                  self.right_size(self.tree[j]) + 1)
@@ -517,22 +680,11 @@ class AVLTree(BinarySearchTree):
                                  self.right_size(self.tree[k]) + 1)
 
     def _left_rotate(self, j, k):
-        y = self.tree[k].left
-        if y != None:
-            self.tree[y].parent = j
-        self.tree[j].right = y
-        self.tree[k].parent = self.tree[j].parent
-        if self.tree[k].parent != None:
-            self.tree[self.tree[k].parent].right = k
-        self.tree[j].parent = k
-        self.tree[k].left = j
+        super(AVLTree, self)._left_rotate(j, k)
         self.tree[j].height = max(self.left_height(self.tree[j]),
                                   self.right_height(self.tree[j])) + 1
         self.tree[k].height = max(self.left_height(self.tree[k]),
                                     self.right_height(self.tree[k])) + 1
-        kp = self.tree[k].parent
-        if kp == None:
-            self.root_idx = k
         if self.is_order_statistic:
             self.tree[j].size = (self.left_size(self.tree[j]) +
                                  self.right_size(self.tree[j]) + 1)
@@ -541,7 +693,7 @@ class AVLTree(BinarySearchTree):
         walk = last
         path = Queue()
         path.append(curr), path.append(last)
-        while walk != None:
+        while walk is not None:
             self.tree[walk].height = max(self.left_height(self.tree[walk]),
                                         self.right_height(self.tree[walk])) + 1
             if self.is_order_statistic:
@@ -551,14 +703,14 @@ class AVLTree(BinarySearchTree):
             last2last = path.popleft()
             if self.balance_factor(self.tree[walk]) not in (1, 0, -1):
                 l = self.tree[walk].left
-                if l != None and l == last and self.tree[l].left == last2last:
+                if l is not None and l == last and self.tree[l].left == last2last:
                     self._right_rotate(walk, last)
                 r = self.tree[walk].right
-                if r != None and r == last and self.tree[r].right == last2last:
+                if r is not None and r == last and self.tree[r].right == last2last:
                     self._left_rotate(walk, last)
-                if l != None and l == last and self.tree[l].right == last2last:
+                if l is not None and l == last and self.tree[l].right == last2last:
                     self._left_right_rotate(walk, last)
-                if r != None and r == last and self.tree[r].left == last2last:
+                if r is not None and r == last and self.tree[r].left == last2last:
                     self._right_left_rotate(walk, last)
             path.append(walk), path.append(last)
             walk = self.tree[walk].parent
@@ -569,7 +721,7 @@ class AVLTree(BinarySearchTree):
 
     def _balance_deletion(self, start_idx, key):
         walk = start_idx
-        while walk != None:
+        while walk is not None:
             self.tree[walk].height = max(self.left_height(self.tree[walk]),
                                         self.right_height(self.tree[walk])) + 1
             if self.is_order_statistic:
@@ -654,14 +806,14 @@ class BinaryTreeTraversal(object):
         """
         visit = []
         tree, size = self.tree.tree, self.tree.size
-        s = Stack(maxsize=size)
+        s = Stack()
         s.push(node)
         while not s.is_empty:
             node = s.pop()
             visit.append(tree[node])
-            if tree[node].right != None:
+            if tree[node].right is not None:
                 s.push(tree[node].right)
-            if tree[node].left != None:
+            if tree[node].left is not None:
                 s.push(tree[node].left)
         return visit
 
@@ -672,9 +824,9 @@ class BinaryTreeTraversal(object):
         """
         visit = []
         tree, size = self.tree.tree, self.tree.size
-        s = Stack(maxsize=size)
-        while not s.is_empty or node != None:
-            if node != None:
+        s = Stack()
+        while not s.is_empty or node is not None:
+            if node is not None:
                 s.push(node)
                 node = tree[node].left
             else:
@@ -690,14 +842,14 @@ class BinaryTreeTraversal(object):
         """
         visit = []
         tree, size = self.tree.tree, self.tree.size
-        s = Stack(maxsize=size)
+        s = Stack()
         s.push(node)
         last = OneDimensionalArray(int, size)
         last.fill(False)
         while not s.is_empty:
             node = s.peek
             l, r = tree[node].left, tree[node].right
-            cl, cr = l == None or last[l], r == None or last[r]
+            cl, cr = l is None or last[l], r is None or last[r]
             if cl and cr:
                 s.pop()
                 visit.append(tree[node])
@@ -738,7 +890,7 @@ class BinaryTreeTraversal(object):
         list
             Each element is of type 'TreeNode'.
         """
-        if node == None:
+        if node is None:
             node = self.tree.root_idx
         if order not in ('in_order', 'post_order', 'pre_order', 'out_order'):
             raise NotImplementedError(
@@ -772,15 +924,132 @@ class BinaryTreeTraversal(object):
         if strategy not in strategies:
             raise NotImplementedError(
                 "%s startegy is not implemented yet"%(strategy))
-        if node == None:
+        if node is None:
             node = self.tree.root_idx
         q, visit, tree = Queue(), [], self.tree.tree
         q.append(node)
         while len(q) > 0:
             node = q.popleft()
             visit.append(tree[node])
-            if tree[node].left != None:
+            if tree[node].left is not None:
                 q.append(tree[node].left)
-            if tree[node].right != None:
+            if tree[node].right is not None:
                 q.append(tree[node].right)
         return visit
+
+class BinaryIndexedTree(object):
+    """
+    Represents binary indexed trees
+    a.k.a fenwick trees.
+
+    Parameters
+    ==========
+
+    array: list/tuple
+        The array whose elements are to be
+        considered for the queries.
+
+    Examples
+    ========
+
+    >>> from pydatastructs import BinaryIndexedTree
+    >>> bit = BinaryIndexedTree([1, 2, 3])
+    >>> bit.get_sum(0, 2)
+    6
+    >>> bit.update(0, 100)
+    >>> bit.get_sum(0, 2)
+    105
+
+    References
+    ==========
+
+    .. [1] https://en.wikipedia.org/wiki/Fenwick_tree
+    """
+
+    __slots__ = ['tree', 'array', 'flag']
+
+    def __new__(cls, array):
+
+        obj = object.__new__(cls)
+        obj.array = OneDimensionalArray(type(array[0]), array)
+        obj.tree = [0] * (obj.array._size + 2)
+        obj.flag = [0] * (obj.array._size)
+        for index in range(obj.array._size):
+            obj.update(index, array[index])
+        return obj
+
+    def update(self, index, value):
+        """
+        Updates value at the given index.
+
+        Parameters
+        ==========
+
+        index: int
+            Index of element to be updated.
+
+        value
+            The value to be inserted.
+        """
+        _index, _value = index, value
+        if self.flag[index] == 0:
+            self.flag[index] = 1
+            index += 1
+            while index < self.array._size + 1:
+                self.tree[index] += value
+                index = index + (index & (-index))
+        else:
+            value = value - self.array[index]
+            index += 1
+            while index < self.array._size + 1:
+                self.tree[index] += value
+                index = index + (index & (-index))
+        self.array[_index] = _value
+
+    def get_prefix_sum(self, index):
+        """
+        Computes sum of elements from index 0 to given index.
+
+        Parameters
+        ==========
+
+        index: int
+            Index till which sum has to be calculated.
+
+        Returns
+        =======
+
+        sum: int
+            The required sum.
+        """
+        index += 1
+        sum = 0
+        while index > 0:
+            sum += self.tree[index]
+            index = index - (index & (-index))
+        return sum
+
+    def get_sum(self, left_index, right_index):
+        """
+        Get sum of elements from left index to right index.
+
+        Parameters
+        ==========
+
+        left_index: int
+            Starting index from where sum has to be computed.
+
+        right_index: int
+            Ending index till where sum has to be computed.
+
+        Returns
+        =======
+
+        sum: int
+            The required sum
+        """
+        if left_index >= 1:
+            return self.get_prefix_sum(right_index) - \
+                   self.get_prefix_sum(left_index - 1)
+        else:
+            return self.get_prefix_sum(right_index)

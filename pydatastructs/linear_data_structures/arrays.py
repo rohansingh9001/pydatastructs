@@ -1,4 +1,3 @@
-from __future__ import print_function, division
 from pydatastructs.utils.misc_util import _check_type, NoneType
 
 __all__ = [
@@ -49,8 +48,8 @@ class OneDimensionalArray(Array):
     Examples
     ========
 
-    >>> from pydatastructs import OneDimensionalArray as ODA
-    >>> arr = ODA(int, 5)
+    >>> from pydatastructs import OneDimensionalArray
+    >>> arr = OneDimensionalArray(int, 5)
     >>> arr.fill(6)
     >>> arr[0]
     6
@@ -67,22 +66,22 @@ class OneDimensionalArray(Array):
     __slots__ = ['_size', '_data', '_dtype']
 
     def __new__(cls, dtype=NoneType, *args, **kwargs):
-        if dtype == NoneType or len(args) not in (1, 2):
+        if dtype is NoneType or len(args) not in (1, 2):
             raise ValueError("1D array cannot be created due to incorrect"
                                 " information.")
-        obj = object.__new__(cls)
+        obj = Array.__new__(cls)
         obj._dtype = dtype
         if len(args) == 2:
             if _check_type(args[0], list) and \
                 _check_type(args[1], int):
                 for i in range(len(args[0])):
-                    if dtype != type(args[0][i]):
+                    if _check_type(args[0][i], dtype) is False:
                         args[0][i] = dtype(args[0][i])
                 size, data = args[1], [arg for arg in args[0]]
             elif _check_type(args[1], list) and \
                 _check_type(args[0], int):
                 for i in range(len(args[1])):
-                    if dtype != type(args[1][i]):
+                    if _check_type(args[1][i], dtype) is False:
                         args[1][i] = dtype(args[1][i])
                 size, data = args[0], [arg for arg in args[1]]
             else:
@@ -100,7 +99,7 @@ class OneDimensionalArray(Array):
                 obj._data = [init for i in range(args[0])]
             elif _check_type(args[0], (list, tuple)):
                 for i in range(len(args[0])):
-                    if dtype != type(args[0][i]):
+                    if _check_type(args[0][i], dtype) is False:
                         args[0][i] = dtype(args[0][i])
                 obj._size, obj._data = len(args[0]), \
                                         [arg for arg in args[0]]
@@ -119,7 +118,7 @@ class OneDimensionalArray(Array):
         if elem is None:
             self._data[idx] = None
         else:
-            if type(elem) != self._dtype:
+            if _check_type(elem, self._dtype) is False:
                 elem = self._dtype(elem)
             self._data[idx] = elem
 
@@ -128,7 +127,12 @@ class OneDimensionalArray(Array):
         for i in range(self._size):
             self._data[i] = elem
 
-ODA = OneDimensionalArray
+    def __len__(self):
+        return self._size
+
+    def __str__(self):
+        return str(self._data)
+
 
 class DynamicArray(Array):
     """
@@ -207,20 +211,25 @@ class DynamicOneDimensionalArray(DynamicArray, OneDimensionalArray):
     def __new__(cls, dtype=NoneType, *args, **kwargs):
         obj = super().__new__(cls, dtype, *args, **kwargs)
         obj._load_factor = float(kwargs.get('load_factor', 0.25))
-        obj._num = 0 if obj._size == 0 or obj[0] == None else obj._size
+        obj._num = 0 if obj._size == 0 or obj[0] is None else obj._size
         obj._last_pos_filled = obj._num - 1
         return obj
 
-    def _modify(self):
+    def _modify(self, force=False):
         """
         Contracts the array if Num(T)/Size(T) falls
         below load factor.
         """
-        if self._num/self._size < self._load_factor:
-            arr_new = ODA(self._dtype, 2*self._num + 1)
+        if force:
+            i = -1
+            while self._data[i] is None:
+                i -= 1
+            self._last_pos_filled = i%self._size
+        if (self._num/self._size < self._load_factor):
+            arr_new = OneDimensionalArray(self._dtype, 2*self._num + 1)
             j = 0
             for i in range(self._last_pos_filled + 1):
-                if self[i] != None:
+                if self._data[i] is not None:
                     arr_new[j] = self[i]
                     j += 1
             self._last_pos_filled = j - 1
@@ -229,23 +238,21 @@ class DynamicOneDimensionalArray(DynamicArray, OneDimensionalArray):
 
     def append(self, el):
         if self._last_pos_filled + 1 == self._size:
-            arr_new = ODA(self._dtype, 2*self._size + 1)
+            arr_new = OneDimensionalArray(self._dtype, 2*self._size + 1)
             for i in range(self._last_pos_filled + 1):
                 arr_new[i] = self[i]
             arr_new[self._last_pos_filled + 1] = el
-            self._last_pos_filled += 1
             self._size = arr_new._size
-            self._num += 1
             self._data = arr_new._data
         else:
             self[self._last_pos_filled + 1] = el
-            self._last_pos_filled += 1
-            self._num += 1
+        self._last_pos_filled += 1
+        self._num += 1
         self._modify()
 
     def delete(self, idx):
         if idx <= self._last_pos_filled and idx >= 0 and \
-            self[idx] != None:
+            self[idx] is not None:
             self[idx] = None
             self._num -= 1
             if self._last_pos_filled == idx:
@@ -255,6 +262,17 @@ class DynamicOneDimensionalArray(DynamicArray, OneDimensionalArray):
     @property
     def size(self):
         return self._size
+
+    def __str__(self):
+        to_be_printed = ['' for i in range(self._last_pos_filled + 1)]
+        for i in range(self._last_pos_filled + 1):
+            if self._data[i] is not None:
+                to_be_printed[i] = str(self._data[i])
+        return str(to_be_printed)
+
+    def __reversed__(self):
+        for i in range(self._last_pos_filled, -1, -1):
+            yield self._data[i]
 
 class ArrayForTrees(DynamicOneDimensionalArray):
     """
@@ -271,16 +289,16 @@ class ArrayForTrees(DynamicOneDimensionalArray):
             arr_new = OneDimensionalArray(self._dtype, 2*self._num + 1)
             j = 0
             for i in range(self._last_pos_filled + 1):
-                if self[i] != None:
+                if self[i] is not None:
                     arr_new[j] = self[i]
                     new_indices[self[i].key] = j
                     j += 1
             for i in range(j):
-                if arr_new[i].left != None:
+                if arr_new[i].left is not None:
                     arr_new[i].left = new_indices[self[arr_new[i].left].key]
-                if arr_new[i].right != None:
+                if arr_new[i].right is not None:
                     arr_new[i].right = new_indices[self[arr_new[i].right].key]
-                if arr_new[i].parent != None:
+                if arr_new[i].parent is not None:
                     arr_new[i].parent = new_indices[self[arr_new[i].parent].key]
             self._last_pos_filled = j - 1
             self._data = arr_new._data

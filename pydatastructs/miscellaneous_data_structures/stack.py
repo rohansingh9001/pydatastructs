@@ -1,17 +1,13 @@
-
-from __future__ import print_function, division
-from pydatastructs.linear_data_structures import OneDimensionalArray
+from pydatastructs.linear_data_structures import DynamicOneDimensionalArray, SinglyLinkedList
+from pydatastructs.utils.misc_util import _check_type, NoneType
 from copy import deepcopy as dc
 
 __all__ = [
     'Stack'
 ]
 
-_check_type = lambda a, t: isinstance(a, t)
-NoneType = type(None)
-
 class Stack(object):
-    """Respresentation of stack data structure
+    """Representation of stack data structure
 
     Parameters
     ==========
@@ -21,32 +17,26 @@ class Stack(object):
         By default, 'array'
         Currently only supports 'array'
         implementation.
-    maxsize : int
-        The maximum size of the stack.
-        For array implementation.
-    top : int
-        The top element of the stack.
-        For array implementation.
-    items : OneDimensionalArray
+    items : list/tuple
         Optional, by default, None
         The inital items in the stack.
         For array implementation.
     dtype : A valid python type
-        Optional, by default int if item
+        Optional, by default NoneType if item
         is None, otherwise takes the data
-        type of OneDimensionalArray
+        type of DynamicOneDimensionalArray
         For array implementation.
 
-    Example
-    =======
+    Examples
+    ========
 
     >>> from pydatastructs import Stack
-    >>> s = Stack(maxsize=5, top=0)
+    >>> s = Stack()
     >>> s.push(1)
     >>> s.push(2)
     >>> s.push(3)
     >>> str(s)
-    '[1, 2, 3, None, None]'
+    '[1, 2, 3]'
     >>> s.pop()
     3
 
@@ -59,10 +49,12 @@ class Stack(object):
     def __new__(cls, implementation='array', **kwargs):
         if implementation == 'array':
             return ArrayStack(
-                kwargs.get('maxsize', None),
-                kwargs.get('top', 0),
                 kwargs.get('items', None),
                 kwargs.get('dtype', int))
+        if implementation == 'linked_list':
+            return LinkedListStack(
+                kwargs.get('items',None)
+            )
         raise NotImplementedError(
                 "%s hasn't been implemented yet."%(implementation))
 
@@ -76,57 +68,101 @@ class Stack(object):
 
     @property
     def is_empty(self):
-        return None
+        raise NotImplementedError(
+              "This is an abstract method.")
 
     @property
     def peek(self):
-        return None
+        raise NotImplementedError(
+              "This is an abstract method.")
 
 class ArrayStack(Stack):
 
-    __slots__ = ['maxsize', 'top', 'items', 'dtype']
+    __slots__ = ['items']
 
-    def __new__(cls, maxsize=None, top=0, items=None, dtype=int):
-        if not _check_type(maxsize, int):
-            raise ValueError("maxsize is missing.")
-        if not _check_type(top, int):
-            raise TypeError("top is not of type int.")
-        if items == None:
-            items = OneDimensionalArray(dtype, maxsize)
-        if not _check_type(items, OneDimensionalArray):
-            raise ValueError("items is not of type, OneDimensionalArray")
-        if items._size > maxsize:
-            raise ValueError("Overflow, size of items %s is greater "
-                            "than maxsize, %s"%(items._size, maxsize))
+    def __new__(cls, items=None, dtype=NoneType):
+        if items is None:
+            items = DynamicOneDimensionalArray(dtype, 0)
+        else:
+            items = DynamicOneDimensionalArray(dtype, items)
         obj = object.__new__(cls)
-        obj.maxsize, obj.top, obj.items, obj.dtype = \
-            maxsize, top, items, items._dtype
+        obj.items = items
         return obj
 
     def push(self, x):
-        if self.top == self.maxsize:
-            raise ValueError("Stack is full.")
-        self.items[self.top] = self.dtype(x)
-        self.top += 1
+        if self.is_empty:
+            self.items._dtype = type(x)
+        self.items.append(x)
 
     def pop(self):
-        if self.top == 0:
-            raise ValueError("Stack is already empty.")
-        self.top -= 1
-        r = self.items[self.top]
-        self.items[self.top] = None
-        return r
+        if self.is_empty:
+            raise IndexError("Stack is empty")
+
+        top_element = dc(self.items[self.items._last_pos_filled])
+        self.items.delete(self.items._last_pos_filled)
+        return top_element
 
     @property
     def is_empty(self):
-        return self.top == 0
+        return self.items._last_pos_filled == -1
 
     @property
     def peek(self):
-        return self.items[self.top - 1]
+        return self.items[self.items._last_pos_filled]
+
+    def __len__(self):
+        return self.items._num
 
     def __str__(self):
         """
         Used for printing.
         """
         return str(self.items._data)
+
+
+class LinkedListStack(Stack):
+
+    __slots__ = ['stack']
+
+    def __new__(cls, items=None):
+        obj = object.__new__(cls)
+        obj.stack = SinglyLinkedList()
+        if items is None:
+            pass
+        elif type(items) in (list, tuple):
+            for x in items:
+                obj.push(x)
+        else:
+            raise TypeError("Expected type: list/tuple")
+        return obj
+
+    def push(self, x):
+        self.stack.append_left(x)
+
+    def pop(self):
+        if self.is_empty:
+            raise IndexError("Stack is empty")
+        return self.stack.pop_left()
+
+    @property
+    def is_empty(self):
+        return self.__len__() == 0
+
+    @property
+    def peek(self):
+        return self.stack.head
+
+    @property
+    def size(self):
+        return self.stack.size
+
+    def __len__(self):
+        return self.stack.size
+
+    def __str__(self):
+        elements = []
+        current_node = self.peek
+        while current_node is not None:
+            elements.append(str(current_node))
+            current_node = current_node.next
+        return str(elements[::-1])
